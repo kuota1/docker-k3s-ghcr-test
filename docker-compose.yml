@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  web:
+    image: rober0010/mi-nginx-custom:latest
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+   

@@ -1,5 +1,5 @@
 # Imagen base de Nginx
-FROM nginx:alpine
+FROM nginx:alpine as base
 
 
 RUN apk add --no-cache curl

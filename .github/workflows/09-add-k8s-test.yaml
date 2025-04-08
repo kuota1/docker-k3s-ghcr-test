@@ -45,7 +45,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ghcr.io/kuota1/miapp:${{ github.run_id }} ghcr.io/kuota/miapp:latest
+          tags: ghcr.io/kuota1/miapp:${{ github.run_id }} 
+              - ghcr.io/kuota/miapp:latest
           target: test
           cache-from: type=gha
           cache-to: type=gha,mode=max

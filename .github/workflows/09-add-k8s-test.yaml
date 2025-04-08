@@ -69,6 +69,15 @@ jobs:
           envsubst < manifests/deployment.yaml  | kubectl apply -f -
           kubectl rollout status deployment myapp
           kubectl exec deploy/myapp -- curl --fail localhost
+      - name: Debug - inspect Deployment
+        run: |
+          echo "--- POD STATUS ---"
+          kubectl get pods -o wide
+          echo "--- POD DESCRIPTION ---"
+          kubectl describe pods -l app=myapp
+          echo "--- CONTAINER LOGS ---"
+          kubectl logs -l app=myapp
+
 
       - name: Docker Metadata for Final Image Build
         id: docker_meta

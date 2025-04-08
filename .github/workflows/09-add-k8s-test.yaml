@@ -36,7 +36,24 @@ jobs:
       - name: Create K3d Cluster
         uses: AbsaOSS/k3d-action@v2
         with:
-          cluster-name: test-cluster
+          cluster-name: "test-cluster-1"
+          args: >
+            --agents 1
+            --no-lb
+            --k3s-arg "--no-deploy=traefik@server:0"
+
+      - name: Wait for K3s API
+        run: |
+          echo "Esperando que K3s esté disponible..."
+          for i in {1..10}; do 
+            if kubectl get nodes > /dev/null 2>&1; then 
+              echo "K3s está listo"
+              break
+            fi 
+            echo "⏳ Esperando... intento $i"
+            sleep 5
+          done
+
 
       - name: Deploy app using kubectl
         run: |

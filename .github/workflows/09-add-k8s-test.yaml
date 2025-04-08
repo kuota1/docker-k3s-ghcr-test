@@ -64,7 +64,7 @@ jobs:
           kubectl create secret docker-registry regcred \
             --docker-server=https://ghcr.io \
             --docker-username=${{ github.actor }} \
-            --docker-password=${{ secrets.GITHUB_TOKEN }}
+            --docker-password=${{ secrets.GHCR_PAT }}
           export TESTING_IMAGE=ghcr.io/kuota1/miapp:latest
           envsubst < manifests/deployment.yaml  | kubectl apply -f -
       - name: Wait for rollout

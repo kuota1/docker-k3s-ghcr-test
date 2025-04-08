@@ -50,15 +50,19 @@ jobs:
               echo "K3s está listo"
               break
             fi 
-            echo "⏳ Esperando... intento $i"
+            echo " Esperando... intento $i"
             sleep 5
           done
 
+      - name: Check kubectl context 
+        run:  |
+          kubectl config current-context
+          kubectl get nodes
 
       - name: Deploy app using kubectl
         run: |
           kubectl create secret docker-registry regcred \
-            --docker-server=ghcr.io \
+            --docker-server=https://ghcr.io \
             --docker-username=${{ github.actor }} \
             --docker-password=${{ secrets.GHCR_PAT }}
 
@@ -77,6 +81,6 @@ jobs:
           echo "--- POD STATUS ---"
           kubectl get pods -o wide
           echo "--- POD DESCRIPTION ---"
-          kubectl describe pods -l app=myapp
+          kubectl describe pods -l app=myapp || echo "No pod found with label app=myapp"
           echo "--- CONTAINER LOGS ---"
-          kubectl logs -l app=myapp
+          kubectl logs -l app=myapp --all-containers=true --tail=100 || echo"No logs available"

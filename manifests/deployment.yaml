@@ -17,5 +17,5 @@ spec:
         - name: regcred
       containers:
         - name: myapp
-          image: ghcr.io/kuota/miapp:latest
+          image: "$TESTING_IMAGE"
           imagePullPolicy: IfNotPresent

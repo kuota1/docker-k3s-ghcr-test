@@ -72,6 +72,7 @@ jobs:
       - name: Run smoke test
         run: kubectl exec deploy/myapp -- curl --fail localhost
       - name: Debug - inspect Deployment
+        if: always()
         run: |
           echo "--- POD STATUS ---"
           kubectl get pods -o wide

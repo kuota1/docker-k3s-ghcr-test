@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: myapp
+  name: my-nginx-latest
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: myapp
+      app: my-nginx-latest
   template:
     metadata:
       labels:
-       app: myapp
+       app: my-nginx-latest
     spec:
       imagePullSecrets:
         - name: regcred
       containers:
-        - name: myapp
-          image: "$TESTING_IMAGE"
+        - name: my-nginx-latest
+          image: "${TESTING_IMAGE}"
           imagePullPolicy: IfNotPresent

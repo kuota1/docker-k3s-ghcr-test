@@ -1,86 +1,96 @@
+name: 09 Build and Smoke Test
+
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Login to GHCR
-        uses: docker/login-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build and Push image to GHCR
+      - name: Docker Metadata (GHCR + DockerHub)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            rober0010/my-nginx-latest
+            ghcr.io/kuota1/my-nginx-latest
+          tags: |
+            type=raw,value=${{ github.run_id }}
+            type=raw,value=latest,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }}
+
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/kuota1/miapp:latest
-          target: test
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64
 
-      - name: Create K3d Cluster
+      - name: Create k3d Cluster
         uses: AbsaOSS/k3d-action@v2
         with:
           cluster-name: "test-cluster-1"
-          args: >
+          args: >-
             --agents 1
             --no-lb
-            --k3s-arg "--no-deploy=traefik@server:0"
+            --k3s-arg "--no-deploy=traefik,servicelb,metrics-server@server:*"
 
-      - name: Wait for K3s API
-        run: |
-          echo "Esperando que K3s esté disponible..."
-          for i in {1..10}; do 
-            if kubectl get nodes > /dev/null 2>&1; then 
-              echo "K3s está listo"
-              break
-            fi 
-            echo " Esperando... intento $i"
-            sleep 5
-          done
-
-      - name: Check kubectl context 
-        run:  |
-          kubectl config current-context
-          kubectl get nodes
-
-      - name: Deploy app using kubectl
+      - name: Create secret and deploy to cluster
         run: |
           kubectl create secret docker-registry regcred \
             --docker-server=https://ghcr.io \
             --docker-username=${{ github.actor }} \
             --docker-password=${{ secrets.GHCR_PAT }}
 
-          export TESTING_IMAGE=ghcr.io/kuota1/miapp:latest
+          export TESTING_IMAGE=ghcr.io/kuota1/my-nginx-latest:${{ github.run_id }}
           envsubst < manifests/deployment.yaml | kubectl apply -f -
 
-      - name: Wait for rollout
-        run: kubectl rollout status deployment myapp
+      - name: Wait for rollout to finish
+        run: |
+          kubectl rollout status deployment my-nginx-latest
 
       - name: Smoke Test
-        run: kubectl exec deploy/myapp -- curl --fail localhost
+        run: |
+          kubectl exec deploy/my-nginx-latest -- curl --fail localhost
 
-      - name: Debug Deployment
+      - name: Debug (always runs)
         if: always()
         run: |
-          echo "--- POD STATUS ---"
+          echo "==== PODS ===="
           kubectl get pods -o wide
-          echo "--- POD DESCRIPTION ---"
-          kubectl describe pods -l app=myapp || echo "No pod found with label app=myapp"
-          echo "--- CONTAINER LOGS ---"
-          kubectl logs -l app=myapp --all-containers=true --tail=100 || echo"No logs available"
+          echo "==== LOGS ===="
+          kubectl logs -l app=my-nginx-latest
+          echo "==== DESCRIBE ===="
+          kubectl describe deployment my-nginx-latest
